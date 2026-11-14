@@ -10,6 +10,10 @@ Sektionen **Ikke udrullet** indeholder commits, der endnu ikke er sat i drift (i
 - **(app)** Launcher-UI med TizenTube, DR, OpenIPTV og kildeliste (c38d4ca)
 - **(service)** Service-bro der lister og starter TV'ets apps og henter ikoner (b53eb7e)
 
+### Rettelser
+- **(app)** OpenIPTV som app-felt, diagnostik paa pil ned, synlig debug-HUD (f094252)
+- **(pkg)** Fjern ugyldige registerKey-navne (pil/Enter) fra keys (b986c1d)
+
 ### Dokumentation
 - README med installation, AutoLaunch og hvorfor repoet er offentligt (c485bea)
 
