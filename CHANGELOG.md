@@ -6,14 +6,6 @@ Sektionen **Ikke udrullet** indeholder commits, der endnu ikke er sat i drift (i
 
 ## [Ikke udrullet]
 
-### Rettelser
-- **(tag-deploy)** Rebase før push, så Actionens changelog-commit ikke afviser markeringen (3b43e48)
-
-### Drift
-- **(changelog)** Prøv push igen, når main flytter sig under kørslen (46a6a02)
-
-## [2026.10.17] – 2026-10-17
-
-### Drift
-- Opret repo-skabelon (c0e5d12)
+### Andet
+- Initial commit (a07a6ab)
 
