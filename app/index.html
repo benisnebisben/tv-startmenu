@@ -95,11 +95,12 @@
 (function () {
   'use strict';
 
+  var BUILD = '0.1.1';
   var hudEl = document.getElementById('hud');
   var dbg = { key: '-', svc: '…', apps: '-', mods: '-', err: '' };
   function hud() {
     if (!hudEl) { return; }
-    hudEl.innerHTML = 'tast:' + dbg.key + '  service:' + dbg.svc + '  apps:' + dbg.apps +
+    hudEl.innerHTML = 'build:' + BUILD + '  tast:' + dbg.key + '  service:' + dbg.svc + '  apps:' + dbg.apps +
       '  moduler:' + dbg.mods + (dbg.err ? '  <span style="color:#ff8080">FEJL: ' + dbg.err + '</span>' : '');
   }
   window.onerror = function (msg, src, line) { dbg.err = msg + ' @' + line; hud(); return false; };
