@@ -1,0 +1,90 @@
+name: Changelog
+
+# 1) Sætter dato-tags (v2026.10.17, v2026.10.17.2 ...) på commits af typen "chore(release): ..."
+#    (dem laver scripts/tag-deploy.sh efter en udrulning – tags kan ikke pushes fra cloud-sessioner,
+#    derfor går det via et commit, som Actionen tagger).
+# 2) Genererer CHANGELOG.md fra commit-historikken (git-cliff) og committer den til default-branchen.
+# Kører ved push til default-branchen (main/master) og ved manuelt pushede tags (v*). Rediger aldrig CHANGELOG.md manuelt.
+
+on:
+  push:
+    branches: [main, master]
+    tags: ["v[0-9]*"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+# Kun én kørsel ad gangen, så to pushes tæt på hinanden ikke kæmper om CHANGELOG.md og tag-numre.
+concurrency:
+  group: changelog
+  cancel-in-progress: false
+
+jobs:
+  changelog:
+    name: Tags og CHANGELOG.md
+    runs-on: ubuntu-latest
+    # Tredje sikkerhedsnet mod loops (GitHub udløser i forvejen ikke workflows på pushes lavet med GITHUB_TOKEN,
+    # og commit-beskeden har [skip ci]).
+    if: github.actor != 'github-actions[bot]'
+    env:
+      DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+    steps:
+      - name: Hent hele historikken (inkl. tags)
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+          fetch-depth: 0
+
+      - name: Git-identitet til bot-commits og tags
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+
+      - name: Sæt dato-tags på chore(release)-commits uden tag
+        run: |
+          set -euo pipefail
+          # Ældste først, så flere udrulninger samme dag nummereres i rækkefølge.
+          for sha in $(git log --reverse --format=%H --grep='^chore(release):' "$DEFAULT_BRANCH"); do
+            if git tag --points-at "$sha" | grep -qE '^v[0-9]'; then
+              continue
+            fi
+            day=$(TZ=Europe/Copenhagen git log -1 --format=%ad --date=format-local:%Y.%m.%d "$sha")
+            tag="v$day"; n=1
+            while git rev-parse -q --verify "refs/tags/$tag" >/dev/null; do
+              n=$((n + 1)); tag="v$day.$n"
+            done
+            msg=$(git log -1 --format=%s "$sha" | sed -E 's/^chore\(release\):[[:space:]]*//')
+            git tag -a "$tag" "$sha" -m "Udrulning: $msg"
+            git push origin "refs/tags/$tag"
+            echo "Tag $tag sat på ${sha:0:7}: $msg"
+          done
+
+      - name: Generér changelog
+        uses: orhun/git-cliff-action@v4
+        with:
+          config: cliff.toml
+          args: --verbose
+        env:
+          OUTPUT: CHANGELOG.md
+
+      - name: Commit og push CHANGELOG.md hvis der er ændringer
+        run: |
+          if git diff --quiet -- CHANGELOG.md && [ -z "$(git ls-files --others --exclude-standard CHANGELOG.md)" ]; then
+            echo "CHANGELOG.md er allerede opdateret – intet at committe."
+            exit 0
+          fi
+          git add CHANGELOG.md
+          git commit -m "chore(changelog): opdatér CHANGELOG.md [skip ci]"
+          # Et push kan lande på main mellem vores rebase og push (to pushes få sekunder efter hinanden).
+          # Så prøv igen i stedet for at fejle – den næste kørsel ordner alligevel resten.
+          for forsoeg in 1 2 3 4 5; do
+            git pull --rebase origin "$DEFAULT_BRANCH"
+            if git push origin "$DEFAULT_BRANCH"; then
+              exit 0
+            fi
+            echo "Push afvist (forsøg $forsoeg/5) – main flyttede sig imens. Prøver igen om ${forsoeg}0 s."
+            sleep "${forsoeg}0"
+          done
+          echo "::warning::Kunne ikke pushe CHANGELOG.md efter 5 forsøg – en senere kørsel genererer den igen."
+          exit 0

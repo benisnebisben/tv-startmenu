@@ -1,0 +1,57 @@
+# git-cliff-konfiguration – https://git-cliff.org/docs/configuration
+# CHANGELOG.md genereres herfra af .github/workflows/changelog.yml. Ret aldrig CHANGELOG.md manuelt.
+
+[changelog]
+header = """
+# Changelog
+
+Denne fil genereres automatisk af [git-cliff](https://git-cliff.org) ud fra commit-historikken.
+Ret den ikke manuelt – skriv i stedet gode commit-beskeder (Conventional Commits, på dansk).
+Sektionen **Ikke udrullet** indeholder commits, der endnu ikke er sat i drift (ikke tagget)."""
+
+body = """
+{%- if version %}
+## [{{ version | trim_start_matches(pat="v") }}] – {{ timestamp | date(format="%Y-%m-%d", timezone="Europe/Copenhagen") }}
+{%- else %}
+## [Ikke udrullet]
+{%- endif %}
+{%- for group, commits in commits | group_by(attribute="group") %}
+
+### {{ group | striptags | trim }}
+{%- for commit in commits %}
+- {% if commit.breaking %}**BREAKING** {% endif %}{% if commit.scope %}**({{ commit.scope }})** {% endif %}{{ commit.message | split(pat="\n") | first | trim | upper_first }} ({{ commit.id | truncate(length=7, end="") }})
+{%- endfor %}
+{%- endfor %}
+"""
+
+footer = ""
+trim = false
+
+[git]
+# Parse Conventional Commits, men smid ikke ikke-konventionelle commits væk – de lander under "Andet",
+# så intet forsvinder lydløst fra historikken.
+conventional_commits = true
+filter_unconventional = false
+split_commits = false
+protect_breaking_commits = true
+filter_commits = false
+
+# Rækkefølgen styres af den skjulte HTML-kommentar (sorteres alfabetisk, fjernes med striptags i skabelonen).
+commit_parsers = [
+  { message = "^chore\\(changelog\\)", skip = true },
+  { message = "^chore\\(release\\)", skip = true },
+  { message = "^feat", group = "<!-- 0 -->Nyt" },
+  { message = "^fix", group = "<!-- 1 -->Rettelser" },
+  { message = "^perf", group = "<!-- 2 -->Ydelse" },
+  { message = "^refactor", group = "<!-- 3 -->Omstrukturering" },
+  { message = "^docs", group = "<!-- 4 -->Dokumentation" },
+  { message = "^test", group = "<!-- 5 -->Test" },
+  { message = "^(chore|ci|build)", group = "<!-- 6 -->Drift" },
+  { message = "^revert", group = "<!-- 7 -->Tilbagerulninger" },
+  { message = ".*", group = "<!-- 8 -->Andet" },
+]
+
+# Udrulnings-tags: v2026.10.17, v2026.10.17.2 osv. (sættes af scripts/tag-deploy.sh)
+tag_pattern = "v[0-9]*"
+topo_order = false
+sort_commits = "newest"

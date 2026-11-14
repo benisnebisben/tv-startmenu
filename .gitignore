@@ -1,0 +1,37 @@
+# Nøgler og lokale miljøer
+.env
+.env.*
+!.env.example
+*.json.key
+service-account*.json
+credentials*.json
+
+# Kundedata og rå datadumps hører ikke hjemme i git (git add -f ved bevidste undtagelser)
+data/
+*.csv
+*.tsv
+*.xlsx
+*.xls
+*.parquet
+*.db
+*.sqlite
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+.pytest_cache/
+
+# Node
+node_modules/
+dist/
+
+# Claude Code – lokal, personlig tilstand
+.claude/settings.local.json
+
+# OS/editor
+.DS_Store
+.idea/
+.vscode/
+*.log
