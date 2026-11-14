@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="da">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=1920, initial-scale=1">
+<title>Startmenu</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  html,body{ height:100%; }
+  body{
+    font-family:"Segoe UI",Roboto,Arial,sans-serif;
+    color:#f4f6f8; overflow:hidden; background:#05070a;
+  }
+  /* Roterende, bløde baggrunde. Byttes senere ud med rigtige naturbilleder. */
+  .bg{ position:fixed; left:0; top:0; right:0; bottom:0; z-index:0; }
+  .bg .frame{ position:absolute; left:0; top:0; right:0; bottom:0; opacity:0; animation:cycle 48s infinite; }
+  .bg .frame.a{ background:radial-gradient(120% 120% at 20% 10%, #1b3a4b 0%, #0c1a24 55%, #05070a 100%); animation-delay:0s; }
+  .bg .frame.b{ background:radial-gradient(120% 120% at 80% 20%, #2a2140 0%, #16122a 55%, #05070a 100%); animation-delay:16s; }
+  .bg .frame.c{ background:radial-gradient(120% 120% at 50% 90%, #123327 0%, #0a1d17 55%, #05070a 100%); animation-delay:32s; }
+  @keyframes cycle{ 0%{opacity:0} 6%{opacity:1} 33%{opacity:1} 39%{opacity:0} 100%{opacity:0} }
+  .bg .veil{ position:absolute; left:0; top:0; right:0; bottom:0;
+    background:linear-gradient(180deg, rgba(0,0,0,.25), rgba(0,0,0,.55)); }
+
+  .wrap{ position:relative; z-index:1; height:100%; display:flex; flex-direction:column; padding:70px 90px; }
+  .top{ display:flex; justify-content:space-between; align-items:flex-start; }
+  .clock{ font-size:64px; font-weight:600; line-height:1; }
+  .date{ margin-top:10px; font-size:22px; color:rgba(244,246,248,.55); }
+  .weather{ text-align:right; }
+  .weather .t{ font-size:40px; font-weight:600; }
+  .weather .c{ font-size:20px; color:rgba(244,246,248,.55); margin-top:4px; }
+
+  .rowwrap{ flex:1; display:flex; align-items:center; }
+  .row{ display:flex; }
+  .card{
+    width:300px; height:300px; margin-right:44px; border-radius:30px; position:relative;
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    background:#14181d; overflow:hidden; transform:scale(.95);
+    transition:transform .2s ease, box-shadow .2s ease, outline-color .2s ease;
+    outline:3px solid transparent;
+  }
+  .card .icon{ width:118px; height:118px; display:flex; align-items:center; justify-content:center; margin-bottom:26px; }
+  .card .icon img{ max-width:100%; max-height:100%; }
+  .card .name{ font-size:30px; font-weight:600; }
+  .card .flag{ position:absolute; bottom:18px; font-size:15px; color:rgba(244,246,248,.5); }
+  .card.sel{ transform:scale(1.05); outline-color:rgba(255,255,255,.92);
+    box-shadow:0 26px 70px rgba(0,0,0,.55), 0 0 60px -10px #fff; }
+  .card.busy{ opacity:.7; }
+
+  .hint{ margin-top:18px; font-size:18px; color:rgba(244,246,248,.55); }
+  .hint span{ margin-right:28px; }
+  .hint b{ color:#f4f6f8; font-weight:600; }
+
+  .toast{ position:fixed; left:50%; bottom:120px; margin-left:-240px; width:480px; text-align:center;
+    z-index:9; background:rgba(0,0,0,.82); padding:14px 20px; border-radius:16px; font-size:20px;
+    opacity:0; transition:opacity .25s; }
+  .toast.on{ opacity:1; }
+
+  .diag{ position:fixed; left:0; top:0; right:0; bottom:0; z-index:5; background:rgba(5,7,10,.95);
+    display:none; align-items:center; justify-content:center; }
+  .diag.on{ display:flex; }
+  .diag .box{ width:900px; max-height:80%; overflow:auto; background:#111519;
+    border:1px solid rgba(255,255,255,.1); border-radius:20px; padding:36px; }
+  .diag h2{ font-size:26px; margin-bottom:14px; }
+  .diag .line{ font-size:17px; padding:7px 0; border-bottom:1px solid rgba(255,255,255,.06);
+    display:flex; justify-content:space-between; }
+  .diag .id{ color:#8fd0ff; }
+  .diag .foot{ margin-top:16px; color:rgba(244,246,248,.55); font-size:16px; }
+</style>
+</head>
+<body>
+  <div class="bg"><div class="frame a"></div><div class="frame b"></div><div class="frame c"></div><div class="veil"></div></div>
+  <div class="wrap">
+    <div class="top">
+      <div><div class="clock" id="clock">--:--</div><div class="date" id="date"></div></div>
+      <div class="weather" id="weather" style="display:none"><div class="t" id="wtemp">--</div><div class="c" id="wcity"></div></div>
+    </div>
+    <div class="rowwrap"><div class="row" id="row"></div></div>
+    <div class="hint">
+      <span><b>&#9664; &#9654;</b> v&aelig;lg</span>
+      <span><b>OK</b> &aring;bn</span>
+      <span><b>Tilbage</b> til TizenBrew</span>
+      <span><b>Gul tast</b> diagnostik</span>
+    </div>
+  </div>
+  <div class="toast" id="toast"></div>
+  <div class="diag" id="diag"><div class="box">
+    <h2>Diagnostik &mdash; TV'ets apps</h2>
+    <div id="diaglist"></div>
+    <div class="foot" id="diagfoot"></div>
+  </div></div>
+
+<script src="config.js"></script>
+<script>
+(function () {
+  'use strict';
+
+  var CFG = window.STARTMENU_CONFIG || { tiles: [] };
+  var SERVICE = 'http://127.0.0.1:8097';
+  var TIZENBREW = 'ws://127.0.0.1:8081';
+  var EV_GET_MODULES = 4;
+  var EV_LAUNCH_MODULE = 5;
+
+  var token = null;
+  var apps = [];            // liste fra service'et: {id,name,show,icon}
+  var modules = [];         // moduler i TizenBrew (fra ws): {name,appPath,...}
+  var tiles = CFG.tiles || [];
+  var sel = 0;
+  var busy = false;
+
+  var row = document.getElementById('row');
+  var toastEl = document.getElementById('toast');
+
+  /* ---------- Småt ---------- */
+  function toast(msg) {
+    toastEl.innerHTML = msg;
+    toastEl.className = 'toast on';
+    if (toast._t) { clearTimeout(toast._t); }
+    toast._t = setTimeout(function () { toastEl.className = 'toast'; }, 2600);
+  }
+  function xhr(method, url, body, headers, done) {
+    var r = new XMLHttpRequest();
+    try { r.open(method, url, true); } catch (e) { return done(0, null); }
+    r.timeout = 20000;
+    if (headers) { for (var k in headers) { if (headers.hasOwnProperty(k)) { r.setRequestHeader(k, headers[k]); } } }
+    r.onreadystatechange = function () {
+      if (r.readyState !== 4) { return; }
+      var data = null;
+      try { data = r.responseText ? JSON.parse(r.responseText) : null; } catch (e) { data = null; }
+      done(r.status, data);
+    };
+    r.ontimeout = function () { done(0, null); };
+    r.onerror = function () { done(0, null); };
+    r.send(body || null);
+  }
+  function norm(s) { return String(s || '').toLowerCase(); }
+
+  /* ---------- Service: session + apps ---------- */
+  function getSession(tries, done) {
+    var url = SERVICE + '/session?nav=' + (window.performance && performance.timing ? performance.timing.navigationStart : 0) + '&ready=' + Date.now();
+    xhr('GET', url, null, null, function (status, data) {
+      if (status === 200 && data && data.token) { token = data.token; return done(true); }
+      if (tries <= 0) { return done(false); }
+      // TizenBrew henter service og side samtidig: prøv igen.
+      setTimeout(function () { getSession(tries - 1, done); }, 600);
+    });
+  }
+  function getApps(done) {
+    xhr('GET', SERVICE + '/apps', null, { 'X-Startmenu-Jeton': token }, function (status, data) {
+      apps = (data && data.list) ? data.list : [];
+      done();
+    });
+  }
+  function resolveApp(tile) {
+    if (tile.id) { return tile.id; }
+    var hints = tile.match || [];
+    for (var i = 0; i < apps.length; i++) {
+      var hay = norm(apps[i].name) + ' ' + norm(apps[i].id);
+      for (var j = 0; j < hints.length; j++) {
+        if (hay.indexOf(norm(hints[j])) !== -1) { return apps[i].id; }
+      }
+    }
+    return null;
+  }
+  function appHasIcon(id) {
+    for (var i = 0; i < apps.length; i++) { if (apps[i].id === id) { return !!apps[i].icon; } }
+    return false;
+  }
+
+  /* ---------- TizenBrews kanal: moduler ---------- */
+  function listModules(done) {
+    var socket, fait = false;
+    function finish(err) { if (fait) { return; } fait = true; try { if (socket) { socket.close(); } } catch (e) {} done(err || null); }
+    var timer = setTimeout(function () { finish('TizenBrew svarer ikke på modullisten.'); }, 10000);
+    try { socket = new WebSocket(TIZENBREW); } catch (e) { clearTimeout(timer); return finish('TizenBrews kanal kan ikke nås.'); }
+    socket.onopen = function () { socket.send(JSON.stringify({ type: EV_GET_MODULES })); };
+    socket.onmessage = function (ev) {
+      var msg = null; try { msg = JSON.parse(ev.data); } catch (e) { return; }
+      if (!msg || msg.type !== EV_GET_MODULES) { return; }
+      if (msg.payload == null) { // null indtil TizenBrew har genlæst modulerne
+        return setTimeout(function () { if (!fait) { socket.send(JSON.stringify({ type: EV_GET_MODULES })); } }, 500);
+      }
+      modules = msg.payload || [];
+      clearTimeout(timer); finish(null);
+    };
+    socket.onerror = function () { clearTimeout(timer); finish('TizenBrews kanal kan ikke nås.'); };
+  }
+  function moduleName(m) { return norm(m && (m.name || m.moduleName || m.id)); }
+  function findModule(wanted) {
+    var w = norm(wanted);
+    var repo = w.split('/').pop(); // sidste led, fx "openiptv" eller "tizentube"
+    for (var i = 0; i < modules.length; i++) {
+      var nm = moduleName(modules[i]);
+      if (nm === w) { return modules[i]; }
+    }
+    for (var k = 0; k < modules.length; k++) {
+      if (moduleName(modules[k]).indexOf(repo) !== -1) { return modules[k]; }
+    }
+    return null;
+  }
+  function openModule(wanted, done) {
+    var mod = findModule(wanted);
+    if (!mod) { return done('Modulet "' + wanted + '" er ikke installeret i TizenBrew endnu.'); }
+    if (!mod.appPath) { return done('Modulet "' + wanted + '" har ingen side at åbne.'); }
+    var socket, fait = false;
+    function finish(err) { if (fait) { return; } fait = true; if (!err) { location.href = mod.appPath; } else { done(err); } }
+    var timer = setTimeout(function () { finish('TizenBrew svarer ikke.'); }, 6000);
+    try { socket = new WebSocket(TIZENBREW); } catch (e) { clearTimeout(timer); return done('TizenBrews kanal kan ikke nås.'); }
+    socket.onopen = function () { socket.send(JSON.stringify({ type: EV_LAUNCH_MODULE, payload: mod })); };
+    socket.onmessage = function (ev) {
+      var msg = null; try { msg = JSON.parse(ev.data); } catch (e) { return; }
+      if (msg && msg.type === EV_LAUNCH_MODULE) { clearTimeout(timer); finish(null); }
+    };
+    socket.onerror = function () { clearTimeout(timer); finish('TizenBrews kanal kan ikke nås.'); };
+  }
+
+  /* ---------- Render ---------- */
+  function iconHTML(tile) {
+    if (tile.type === 'app' && tile._id && appHasIcon(tile._id)) {
+      return '<img src="' + SERVICE + '/ikon?id=' + encodeURIComponent(tile._id) + '" alt="">';
+    }
+    return tile.glyph || '';
+  }
+  function tileFlag(tile) {
+    if (tile.type === 'app' && !tile._id) { return 'ikke fundet p&aring; TV'; }
+    if (tile.type === 'module' && !tile._mod) { return 'ikke installeret'; }
+    return '';
+  }
+  function render() {
+    row.innerHTML = '';
+    for (var i = 0; i < tiles.length; i++) {
+      var t = tiles[i];
+      var el = document.createElement('div');
+      el.className = 'card' + (i === sel ? ' sel' : '');
+      el.style.background = 'linear-gradient(160deg, ' + t.bg[0] + ', ' + t.bg[1] + ')';
+      var flag = tileFlag(t);
+      el.innerHTML = '<div class="icon">' + iconHTML(t) + '</div><div class="name">' + t.name + '</div>' +
+                     (flag ? '<div class="flag">' + flag + '</div>' : '');
+      (function (idx) { el.onclick = function () { sel = idx; paint(); open(tiles[idx]); }; })(i);
+      row.appendChild(el);
+    }
+  }
+  function paint() {
+    var cards = row.childNodes;
+    for (var i = 0; i < cards.length; i++) {
+      cards[i].className = 'card' + (i === sel ? ' sel' : '');
+    }
+  }
+
+  /* ---------- Åbn ---------- */
+  function open(tile) {
+    if (busy) { return; }
+    if (tile.type === 'module') {
+      busy = true; toast('&Aring;bner ' + tile.name + '&hellip;');
+      openModule(tile.module, function (err) { busy = false; if (err) { toast(err); } });
+      return;
+    }
+    if (tile.type === 'app') {
+      if (!tile._id) { return toast(tile.name + ' blev ikke fundet p&aring; TV\'et. &Aring;bn diagnostik (gul tast).'); }
+      busy = true; toast('Starter ' + tile.name + '&hellip;');
+      xhr('POST', SERVICE + '/start', JSON.stringify({ id: tile._id }),
+          { 'X-Startmenu-Jeton': token, 'Content-Type': 'application/json' },
+          function (status, data) {
+            busy = false;
+            if (status !== 200 || !data || !data.ok) { toast('Kunne ikke starte ' + tile.name + (data && data.error ? ': ' + data.error : '') + '.'); }
+          });
+      return;
+    }
+  }
+
+  /* ---------- Diagnostik ---------- */
+  var diag = document.getElementById('diag');
+  function showDiag() {
+    var list = document.getElementById('diaglist');
+    var html = '';
+    for (var i = 0; i < apps.length; i++) {
+      html += '<div class="line"><span>' + (apps[i].name || '(uden navn)') + (apps[i].icon ? ' &#9679;' : '') +
+              '</span><span class="id">' + apps[i].id + '</span></div>';
+    }
+    list.innerHTML = html || '<div class="line">Ingen apps l&aelig;st endnu.</div>';
+    document.getElementById('diagfoot').innerHTML =
+      apps.length + ' apps. Moduler i TizenBrew: ' + modules.length + '. Tryk en tast for at lukke.';
+    diag.className = 'diag on';
+  }
+
+  /* ---------- Tastatur / fjernbetjening ---------- */
+  document.addEventListener('keydown', function (e) {
+    if (diag.className.indexOf('on') !== -1) { diag.className = 'diag'; return; }
+    var k = e.keyCode;
+    // 39/37 piletaster, 13 enter; 405 = gul tast (ColorF2Yellow) på Samsung
+    if (k === 39) { sel = Math.min(sel + 1, tiles.length - 1); paint(); }
+    else if (k === 37) { sel = Math.max(sel - 1, 0); paint(); }
+    else if (k === 13) { open(tiles[sel]); }
+    else if (k === 405 || e.key === 'ColorF2Yellow' || k === 68) { showDiag(); }
+  });
+
+  /* ---------- Ur + vejr ---------- */
+  function tick() {
+    var d = new Date();
+    document.getElementById('clock').innerHTML =
+      ('0' + d.getHours()).slice(-2) + ':' + ('0' + d.getMinutes()).slice(-2);
+    try {
+      document.getElementById('date').innerHTML =
+        d.toLocaleDateString('da-DK', { weekday: 'long', day: 'numeric', month: 'long' });
+    } catch (e) {}
+  }
+  function weather() {
+    if (!CFG.weather) { return; }
+    var w = CFG.weather;
+    var url = 'https://api.open-meteo.com/v1/forecast?latitude=' + w.lat + '&longitude=' + w.lon + '&current=temperature_2m';
+    xhr('GET', url, null, null, function (status, data) {
+      if (status === 200 && data && data.current && data.current.temperature_2m != null) {
+        document.getElementById('wtemp').innerHTML = Math.round(data.current.temperature_2m) + '&deg;';
+        document.getElementById('wcity').innerHTML = w.name;
+        document.getElementById('weather').style.display = 'block';
+      }
+    });
+  }
+
+  /* ---------- Opstart ---------- */
+  function boot() {
+    tick(); setInterval(tick, 10000);
+    // Vis menuen med det samme (reserve-ikoner), berig når data er inde.
+    render();
+    getSession(8, function (ok) {
+      if (!ok) { toast('Modulets service kunne ikke n&aring;s. Genstart TV\'et, hvis det bliver ved.'); return; }
+      getApps(function () {
+        for (var i = 0; i < tiles.length; i++) {
+          if (tiles[i].type === 'app') { tiles[i]._id = resolveApp(tiles[i]); }
+        }
+        listModules(function () {
+          for (var j = 0; j < tiles.length; j++) {
+            if (tiles[j].type === 'module') { tiles[j]._mod = findModule(tiles[j].module); }
+          }
+          render();
+          weather();
+        });
+      });
+    });
+  }
+  boot();
+})();
+</script>
+</body>
+</html>
