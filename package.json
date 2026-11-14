@@ -1,0 +1,25 @@
+{
+  "name": "tv-startmenu",
+  "appName": "Startmenu",
+  "version": "0.1.0",
+  "description": "Lækker TizenBrew-startmenu til stue-TV'et: TizenTube, DR, OpenIPTV og kildeliste, med AutoLaunch.",
+  "packageType": "app",
+  "appPath": "app/index.html",
+  "serviceFile": "service/service.js",
+  "keys": [
+    "ArrowLeft",
+    "ArrowRight",
+    "ArrowUp",
+    "ArrowDown",
+    "Enter",
+    "MediaPlayPause",
+    "MediaPlay",
+    "MediaPause",
+    "MediaStop"
+  ],
+  "files": [
+    "app/",
+    "service/",
+    "README.md"
+  ]
+}
