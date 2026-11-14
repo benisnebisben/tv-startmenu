@@ -79,10 +79,11 @@
       <span><b>&#9664; &#9654;</b> v&aelig;lg</span>
       <span><b>OK</b> &aring;bn</span>
       <span><b>Tilbage</b> til TizenBrew</span>
-      <span><b>Gul tast</b> diagnostik</span>
+      <span><b>Pil ned</b> diagnostik</span>
     </div>
   </div>
   <div class="toast" id="toast"></div>
+  <div id="hud" style="position:fixed;left:14px;bottom:12px;z-index:20;font-size:15px;color:#7fe0a0;background:rgba(0,0,0,.6);padding:6px 10px;border-radius:8px;font-family:monospace;max-width:900px;"></div>
   <div class="diag" id="diag"><div class="box">
     <h2>Diagnostik &mdash; TV'ets apps</h2>
     <div id="diaglist"></div>
@@ -93,6 +94,16 @@
 <script>
 (function () {
   'use strict';
+
+  var hudEl = document.getElementById('hud');
+  var dbg = { key: '-', svc: '…', apps: '-', mods: '-', err: '' };
+  function hud() {
+    if (!hudEl) { return; }
+    hudEl.innerHTML = 'tast:' + dbg.key + '  service:' + dbg.svc + '  apps:' + dbg.apps +
+      '  moduler:' + dbg.mods + (dbg.err ? '  <span style="color:#ff8080">FEJL: ' + dbg.err + '</span>' : '');
+  }
+  window.onerror = function (msg, src, line) { dbg.err = msg + ' @' + line; hud(); return false; };
+  hud();
 
   var CFG = window.STARTMENU_CONFIG || { tiles: [] };
   var SERVICE = 'http://127.0.0.1:8097';
@@ -283,15 +294,19 @@
   }
 
   /* ---------- Tastatur / fjernbetjening ---------- */
-  document.addEventListener('keydown', function (e) {
-    if (diag.className.indexOf('on') !== -1) { diag.className = 'diag'; return; }
+  function onKey(e) {
     var k = e.keyCode;
-    // 39/37 piletaster, 13 enter; 405 = gul tast (ColorF2Yellow) på Samsung
+    dbg.key = k + (e.key ? ' (' + e.key + ')' : ''); hud();
+    if (diag.className.indexOf('on') !== -1) { diag.className = 'diag'; return; }
+    // Samsung: 37/38/39/40 piletaster, 13 OK/Enter. Pil ned åbner diagnostik.
     if (k === 39) { sel = Math.min(sel + 1, tiles.length - 1); paint(); }
     else if (k === 37) { sel = Math.max(sel - 1, 0); paint(); }
     else if (k === 13) { open(tiles[sel]); }
-    else if (k === 405 || e.key === 'ColorF2Yellow' || k === 68) { showDiag(); }
-  });
+    else if (k === 40 || k === 68) { showDiag(); }
+  }
+  document.addEventListener('keydown', onKey);
+  window.addEventListener('keydown', onKey);
+  try { window.focus(); if (document.body) { document.body.focus(); } } catch (eF) {}
 
   /* ---------- Ur + vejr ---------- */
   function tick() {
@@ -322,12 +337,15 @@
     // Vis menuen med det samme (reserve-ikoner), berig når data er inde.
     render();
     getSession(8, function (ok) {
+      dbg.svc = ok ? 'ok' : 'ingen'; hud();
       if (!ok) { toast('Modulets service kunne ikke n&aring;s. Genstart TV\'et, hvis det bliver ved.'); return; }
       getApps(function () {
+        dbg.apps = apps.length; hud();
         for (var i = 0; i < tiles.length; i++) {
           if (tiles[i].type === 'app') { tiles[i]._id = resolveApp(tiles[i]); }
         }
         listModules(function () {
+          dbg.mods = modules.length; hud();
           for (var j = 0; j < tiles.length; j++) {
             if (tiles[j].type === 'module') { tiles[j]._mod = findModule(tiles[j].module); }
           }

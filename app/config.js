@@ -40,8 +40,9 @@ window.STARTMENU_CONFIG = {
     },
     {
       key: 'iptv',
-      type: 'module',
-      module: 'gh/shayanline/OpenIPTV',
+      type: 'app',
+      match: ['openiptv', 'open iptv', 'shayan'],
+      id: null,
       name: 'OpenIPTV',
       glow: '#2fd39a',
       bg: ['#102a22', '#0a1713'],
