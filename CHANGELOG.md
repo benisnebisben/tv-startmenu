@@ -11,6 +11,7 @@ Sektionen **Ikke udrullet** indeholder commits, der endnu ikke er sat i drift (i
 - **(service)** Service-bro der lister og starter TV'ets apps og henter ikoner (b53eb7e)
 
 ### Rettelser
+- **(app)** Lyt efter fjernbetjening i capture-fasen saa TizenBrew ikke sluger tasterne (8d3603f)
 - **(app)** OpenIPTV som app-felt, diagnostik paa pil ned, synlig debug-HUD (f094252)
 - **(pkg)** Fjern ugyldige registerKey-navne (pil/Enter) fra keys (b986c1d)
 
