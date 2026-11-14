@@ -294,18 +294,20 @@
   }
 
   /* ---------- Tastatur / fjernbetjening ---------- */
+  // Lyt i CAPTURE-fasen: fang tasten før TizenBrews egen håndtering (som referencen).
+  function take(e) { if (e.preventDefault) { e.preventDefault(); } if (e.stopImmediatePropagation) { e.stopImmediatePropagation(); } }
   function onKey(e) {
     var k = e.keyCode;
     dbg.key = k + (e.key ? ' (' + e.key + ')' : ''); hud();
-    if (diag.className.indexOf('on') !== -1) { diag.className = 'diag'; return; }
-    // Samsung: 37/38/39/40 piletaster, 13 OK/Enter. Pil ned åbner diagnostik.
-    if (k === 39) { sel = Math.min(sel + 1, tiles.length - 1); paint(); }
-    else if (k === 37) { sel = Math.max(sel - 1, 0); paint(); }
-    else if (k === 13) { open(tiles[sel]); }
-    else if (k === 40 || k === 68) { showDiag(); }
+    if (diag.className.indexOf('on') !== -1) { diag.className = 'diag'; take(e); return; }
+    // Samsung: 37/38/39/40 piletaster, 13 OK/Enter, 10009 Tilbage. Pil ned = diagnostik.
+    if (k === 39) { sel = Math.min(sel + 1, tiles.length - 1); paint(); take(e); }
+    else if (k === 37) { sel = Math.max(sel - 1, 0); paint(); take(e); }
+    else if (k === 13) { open(tiles[sel]); take(e); }
+    else if (k === 40 || k === 68) { showDiag(); take(e); }
+    // 10009 (Tilbage) og alt andet lader vi gå videre til TizenBrew.
   }
-  document.addEventListener('keydown', onKey);
-  window.addEventListener('keydown', onKey);
+  window.addEventListener('keydown', onKey, true);
   try { window.focus(); if (document.body) { document.body.focus(); } } catch (eF) {}
 
   /* ---------- Ur + vejr ---------- */
