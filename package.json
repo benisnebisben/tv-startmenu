@@ -6,17 +6,7 @@
   "packageType": "app",
   "appPath": "app/index.html",
   "serviceFile": "service/service.js",
-  "keys": [
-    "ArrowLeft",
-    "ArrowRight",
-    "ArrowUp",
-    "ArrowDown",
-    "Enter",
-    "MediaPlayPause",
-    "MediaPlay",
-    "MediaPause",
-    "MediaStop"
-  ],
+  "keys": [],
   "files": [
     "app/",
     "service/",
