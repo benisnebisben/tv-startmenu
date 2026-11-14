@@ -6,6 +6,13 @@ Sektionen **Ikke udrullet** indeholder commits, der endnu ikke er sat i drift (i
 
 ## [Ikke udrullet]
 
+### Nyt
+- **(app)** Launcher-UI med TizenTube, DR, OpenIPTV og kildeliste (c38d4ca)
+- **(service)** Service-bro der lister og starter TV'ets apps og henter ikoner (b53eb7e)
+
+### Dokumentation
+- README med installation, AutoLaunch og hvorfor repoet er offentligt (c485bea)
+
 ### Andet
 - Initial commit (a07a6ab)
 
