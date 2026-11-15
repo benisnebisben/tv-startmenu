@@ -31,7 +31,7 @@ window.STARTMENU_CONFIG = {
     {
       key: 'dr',
       type: 'app',
-      match: ['dr '],
+      match: ['drtv', 'dr tv', 'dr.dk'],
       id: null,
       name: 'DR',
       glow: '#2f6bff',

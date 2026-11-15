@@ -57,7 +57,7 @@
   .card::before{ content:""; position:absolute; left:0; top:0; right:0; height:46%; pointer-events:none;
     background:linear-gradient(180deg, rgba(255,255,255,.07), transparent); }
   .card .icon{ position:relative; z-index:1; width:118px; height:118px; display:flex; align-items:center; justify-content:center; margin-bottom:26px; }
-  .card .icon img{ max-width:100%; max-height:100%; }
+  .card .icon img{ width:100%; height:100%; object-fit:contain; border-radius:24px; }
   .card .name{ position:relative; z-index:1; font-size:30px; font-weight:600; }
   .card .flag{ position:absolute; z-index:1; bottom:18px; font-size:15px; color:rgba(244,246,248,.55); }
   .card.sel{ transform:scale(1.07) translateY(-4px);
@@ -120,7 +120,7 @@
 (function () {
   'use strict';
 
-  var BUILD = '0.1.6';
+  var BUILD = '0.1.7';
   var hudEl = document.getElementById('hud');
   var dbg = { key: '-', svc: '…', apps: '-', mods: '-', err: '' };
   function hud() {
@@ -132,7 +132,7 @@
   hud();
 
   var CFG = window.STARTMENU_CONFIG || { tiles: [] };
-  // TizenBrew sætter selv service- og kanal-adressen i URL'en; fast port som reserve.
+  // Faste adresser (TizenBrew: 8081, vores service: 8097). URL-parametre kun til test.
   function getParams() {
     var p = {}, q = location.search.replace(/^\?/, '').split('&');
     for (var i = 0; i < q.length; i++) {
@@ -236,7 +236,7 @@
     };
     socket.onerror = function () { clearTimeout(timer); finish('TizenBrews kanal kan ikke nås.'); };
   }
-  function moduleName(m) { return norm(m && (m.name || m.moduleName || m.id)); }
+  function moduleName(m) { return norm(m && (m.fullName || m.name || m.id)); }
   function findModule(wanted) {
     var w = norm(wanted);
     var repo = w.split('/').pop(); // sidste led, fx "openiptv" eller "tizentube"
@@ -254,15 +254,25 @@
     if (!mod) { return done('Modulet "' + wanted + '" er ikke installeret i TizenBrew endnu.'); }
     if (!mod.appPath) { return done('Modulet "' + wanted + '" har ingen side at åbne.'); }
     var socket, fait = false;
-    function finish(err) { if (fait) { return; } fait = true; if (!err) { location.href = mod.appPath; } else { done(err); } }
-    var timer = setTimeout(function () { finish('TizenBrew svarer ikke.'); }, 6000);
-    try { socket = new WebSocket(TIZENBREW); } catch (e) { clearTimeout(timer); return done('TizenBrews kanal kan ikke nås.'); }
-    socket.onopen = function () { socket.send(JSON.stringify({ type: EV_LAUNCH_MODULE, payload: mod })); };
-    socket.onmessage = function (ev) {
-      var msg = null; try { msg = JSON.parse(ev.data); } catch (e) { return; }
-      if (msg && msg.type === EV_LAUNCH_MODULE) { clearTimeout(timer); finish(null); }
+    function finish(err) {
+      if (fait) { return; } fait = true; clearTimeout(timer);
+      if (err) { return done(err); }
+      // "mods"-moduler med evaluateScriptOnDocumentStart navigeres af TizenBrew selv.
+      if (!mod.evaluateScriptOnDocumentStart) { location.href = mod.appPath; }
+    }
+    var timer = setTimeout(function () { finish('TizenBrews kanal svarer ikke.'); }, 6000);
+    try { socket = new WebSocket(TIZENBREW); } catch (e) { return finish('TizenBrews kanal kan ikke nås.'); }
+    socket.onopen = function () {
+      // Som TizenBrews egen menu: LaunchModule (starter modulets service og klargør
+      // injektionen). TizenBrew sender intet svar, så vi venter kun på at beskeden er afsendt.
+      socket.send(JSON.stringify({ type: EV_LAUNCH_MODULE, payload: mod }));
+      var t0 = Date.now();
+      (function wait() {
+        if (socket.bufferedAmount === 0 || Date.now() - t0 > 500) { return setTimeout(function () { finish(null); }, 150); }
+        setTimeout(wait, 20);
+      })();
     };
-    socket.onerror = function () { clearTimeout(timer); finish('TizenBrews kanal kan ikke nås.'); };
+    socket.onerror = function () { finish('TizenBrews kanal kan ikke nås.'); };
   }
 
   /* ---------- Render ---------- */
@@ -299,11 +309,9 @@
     if (homebtn) { homebtn.className = 'home' + (onHome ? ' sel' : ''); }
   }
 
-  // Tilbage til TizenBrews hjemmeskærm. TizenBrew håndterer ikke selv Tilbage
-  // for app-moduler, så vi gør det: history.back(), ellers TizenBrews rod.
+  // Tilbage til TizenBrews hjemmeskærm: TizenBrews UI ligger lige før os i historikken.
   function goHome() {
     try { history.back(); } catch (e) {}
-    setTimeout(function () { try { location.href = location.protocol + '//' + location.host + '/'; } catch (e2) {} }, 400);
   }
   if (homebtn) { homebtn.onclick = goHome; }
 
@@ -316,7 +324,7 @@
       return;
     }
     if (tile.type === 'app') {
-      if (!tile._id) { return toast(tile.name + ' blev ikke fundet p&aring; TV\'et. &Aring;bn diagnostik (gul tast).'); }
+      if (!tile._id) { return toast(tile.name + ' blev ikke fundet p&aring; TV\'et. Pil ned to gange viser TV\'ets apps.'); }
       busy = true; toast('Starter ' + tile.name + '&hellip;');
       xhr('POST', SERVICE + '/start', JSON.stringify({ id: tile._id }),
           { 'X-Startmenu-Jeton': token, 'Content-Type': 'application/json' },
@@ -330,16 +338,28 @@
 
   /* ---------- Diagnostik ---------- */
   var diag = document.getElementById('diag');
-  function showDiag() {
-    var list = document.getElementById('diaglist');
-    var html = '';
+  var diagPage = 0, DIAG_PER = 12;
+  function diagList() {
+    var hot = [], vis = [], rest = [];
     for (var i = 0; i < apps.length; i++) {
-      html += '<div class="line"><span>' + (apps[i].name || '(uden navn)') + (apps[i].icon ? ' &#9679;' : '') +
-              '</span><span class="id">' + apps[i].id + '</span></div>';
+      var a = apps[i], hay = norm(a.name) + ' ' + norm(a.id);
+      if (/drtv|dr tv|iptv|tube|\bdr\b/.test(hay)) { hot.push(a); }
+      else if (a.show) { vis.push(a); } else { rest.push(a); }
     }
-    list.innerHTML = html || '<div class="line">Ingen apps l&aelig;st endnu.</div>';
-    document.getElementById('diagfoot').innerHTML =
-      apps.length + ' apps. Moduler i TizenBrew: ' + modules.length + '. Tryk en tast for at lukke.';
+    function byName(x, y) { return norm(x.name) < norm(y.name) ? -1 : 1; }
+    return hot.sort(byName).concat(vis.sort(byName), rest.sort(byName));
+  }
+  function showDiag() {
+    var all = diagList(), pages = Math.max(1, Math.ceil(all.length / DIAG_PER));
+    diagPage = Math.max(0, Math.min(diagPage, pages - 1));
+    var html = '';
+    for (var i = diagPage * DIAG_PER; i < Math.min(all.length, (diagPage + 1) * DIAG_PER); i++) {
+      html += '<div class="line"><span>' + (all[i].name || '(uden navn)') + (all[i].icon ? ' &#9679;' : '') +
+              '</span><span class="id">' + all[i].id + '</span></div>';
+    }
+    document.getElementById('diaglist').innerHTML = html || '<div class="line">Ingen apps l&aelig;st endnu.</div>';
+    document.getElementById('diagfoot').innerHTML = 'Side ' + (diagPage + 1) + '/' + pages + ' &middot; ' + apps.length +
+      ' apps &middot; moduler: ' + modules.length + ' &middot; &#9664; &#9654; blad &middot; anden tast lukker';
     diag.className = 'diag on';
   }
 
@@ -349,7 +369,10 @@
   function onKey(e) {
     var k = e.keyCode;
     dbg.key = k + (e.key ? ' (' + e.key + ')' : ''); hud();
-    if (diag.className.indexOf('on') !== -1) { diag.className = 'diag'; take(e); return; }
+    if (diag.className.indexOf('on') !== -1) {
+      if (k === 39) { diagPage += 1; showDiag(); } else if (k === 37) { diagPage -= 1; showDiag(); } else { diag.className = 'diag'; }
+      take(e); return;
+    }
     // 10009 = Tilbage. TizenBrew gør intet selv, så vi sender hjem.
     if (k === 10009) { goHome(); take(e); return; }
     if (onHome) {
