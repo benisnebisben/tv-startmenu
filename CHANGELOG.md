@@ -7,6 +7,7 @@ Sektionen **Ikke udrullet** indeholder commits, der endnu ikke er sat i drift (i
 ## [Ikke udrullet]
 
 ### Nyt
+- **(app)** Tre centrerede felter, fjern Kilder, tilfoej Hjem-knap og Tilbage til TizenBrew (ccfbb7d)
 - **(app)** Launcher-UI med TizenTube, DR, OpenIPTV og kildeliste (c38d4ca)
 - **(service)** Service-bro der lister og starter TV'ets apps og henter ikoner (b53eb7e)
 
@@ -24,6 +25,7 @@ Sektionen **Ikke udrullet** indeholder commits, der endnu ikke er sat i drift (i
 - **(app)** V0.1.1 og synligt build-nr i debug-linje (tvinger frisk hentning i TizenBrew) (d88d5fc)
 
 ### Andet
+- Merge branch 'main' of https://github.com/benisnebisben/tv-startmenu (7cef5eb)
 - Merge branch 'main' of https://github.com/benisnebisben/tv-startmenu (42b8256)
 - Merge branch 'main' of https://github.com/benisnebisben/tv-startmenu (a6a5bed)
 - Initial commit (a07a6ab)
