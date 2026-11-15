@@ -95,7 +95,7 @@
 (function () {
   'use strict';
 
-  var BUILD = '0.1.1';
+  var BUILD = '0.1.2';
   var hudEl = document.getElementById('hud');
   var dbg = { key: '-', svc: '…', apps: '-', mods: '-', err: '' };
   function hud() {
@@ -107,8 +107,19 @@
   hud();
 
   var CFG = window.STARTMENU_CONFIG || { tiles: [] };
-  var SERVICE = 'http://127.0.0.1:8097';
-  var TIZENBREW = 'ws://127.0.0.1:8081';
+  // TizenBrew sætter selv service- og kanal-adressen i URL'en; fast port som reserve.
+  function getParams() {
+    var p = {}, q = location.search.replace(/^\?/, '').split('&');
+    for (var i = 0; i < q.length; i++) {
+      var kv = q[i].split('='), k = decodeURIComponent(kv[0] || ''), v = decodeURIComponent(kv[1] || '');
+      if (k === 'service' && /^http:\/\/127\.0\.0\.1:\d+$/.test(v)) { p.service = v; }
+      if (k === 'tizenbrew' && /^ws:\/\/127\.0\.0\.1:\d+$/.test(v)) { p.tizenbrew = v; }
+    }
+    return p;
+  }
+  var PARAMS = getParams();
+  var SERVICE = PARAMS.service || 'http://127.0.0.1:8097';
+  var TIZENBREW = PARAMS.tizenbrew || 'ws://127.0.0.1:8081';
   var EV_GET_MODULES = 4;
   var EV_LAUNCH_MODULE = 5;
 
@@ -150,10 +161,11 @@
   function getSession(tries, done) {
     var url = SERVICE + '/session?nav=' + (window.performance && performance.timing ? performance.timing.navigationStart : 0) + '&ready=' + Date.now();
     xhr('GET', url, null, null, function (status, data) {
-      if (status === 200 && data && data.token) { token = data.token; return done(true); }
-      if (tries <= 0) { return done(false); }
+      if (status === 200 && data && data.token) { token = data.token; return done(true, status); }
+      dbg.svc = 'prøver (' + status + ', ' + tries + ')'; hud();
+      if (tries <= 0) { return done(false, status); }
       // TizenBrew henter service og side samtidig: prøv igen.
-      setTimeout(function () { getSession(tries - 1, done); }, 600);
+      setTimeout(function () { getSession(tries - 1, done); }, 1000);
     });
   }
   function getApps(done) {
@@ -339,22 +351,25 @@
     tick(); setInterval(tick, 10000);
     // Vis menuen med det samme (reserve-ikoner), berig når data er inde.
     render();
-    getSession(8, function (ok) {
-      dbg.svc = ok ? 'ok' : 'ingen'; hud();
-      if (!ok) { toast('Modulets service kunne ikke n&aring;s. Genstart TV\'et, hvis det bliver ved.'); return; }
+    // Modul-listen (TizenBrews egen kanal) hentes uafhængigt af service'et.
+    listModules(function (mErr) {
+      dbg.mods = mErr ? ('fejl: ' + mErr) : modules.length; hud();
+      for (var j = 0; j < tiles.length; j++) {
+        if (tiles[j].type === 'module') { tiles[j]._mod = findModule(tiles[j].module); }
+      }
+      render();
+    });
+    // Service'et (app-liste + ikoner) — prøver længere, da TizenBrew først skal starte det.
+    getSession(20, function (ok, status) {
+      dbg.svc = ok ? 'ok' : ('ingen (' + status + ')'); hud();
+      if (!ok) { toast('Modulets service svarer ikke (' + status + '). Genstart TV\'et, hvis det bliver ved.'); return; }
       getApps(function () {
         dbg.apps = apps.length; hud();
         for (var i = 0; i < tiles.length; i++) {
           if (tiles[i].type === 'app') { tiles[i]._id = resolveApp(tiles[i]); }
         }
-        listModules(function () {
-          dbg.mods = modules.length; hud();
-          for (var j = 0; j < tiles.length; j++) {
-            if (tiles[j].type === 'module') { tiles[j]._mod = findModule(tiles[j].module); }
-          }
-          render();
-          weather();
-        });
+        render();
+        weather();
       });
     });
   }
