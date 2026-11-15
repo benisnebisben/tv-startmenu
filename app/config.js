@@ -47,16 +47,6 @@ window.STARTMENU_CONFIG = {
       glow: '#2fd39a',
       bg: ['#102a22', '#0a1713'],
       glyph: '<svg width="112" height="112" viewBox="0 0 24 24"><rect x="2.5" y="4.5" width="19" height="12.5" rx="2.5" fill="none" stroke="#2fd39a" stroke-width="1.6"/><path d="M8.5 20.5h7M12 17v3.5" stroke="#2fd39a" stroke-width="1.6" stroke-linecap="round"/><path d="M10.5 8.5l4 2.3-4 2.3z" fill="#2fd39a"/></svg>'
-    },
-    {
-      key: 'kilder',
-      type: 'app',
-      match: ['source', 'kilde', 'hdmi', 'extsource'],
-      id: null,
-      name: 'Kilder',
-      glow: '#c7ccd6',
-      bg: ['#20232a', '#121418'],
-      glyph: '<svg width="112" height="112" viewBox="0 0 24 24"><rect x="3" y="6" width="18" height="12" rx="2.5" fill="none" stroke="#c7ccd6" stroke-width="1.7"/><path d="M8 11h2v2H8zM14 11h2v2h-2z" fill="#c7ccd6"/></svg>'
     }
   ]
 };

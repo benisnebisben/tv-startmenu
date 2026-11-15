@@ -29,10 +29,18 @@
   .weather .t{ font-size:40px; font-weight:600; }
   .weather .c{ font-size:20px; color:rgba(244,246,248,.55); margin-top:4px; }
 
-  .rowwrap{ flex:1; display:flex; align-items:center; }
-  .row{ display:flex; }
+  .rowwrap{ flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; }
+  .row{ display:flex; gap:44px; }
+  .homewrap{ margin-top:42px; }
+  .home{ display:flex; align-items:center; justify-content:center; gap:14px; height:84px; padding:0 34px;
+    border-radius:20px; background:#14181d; transform:scale(.95); outline:3px solid transparent;
+    transition:transform .2s ease, box-shadow .2s ease, outline-color .2s ease; }
+  .home .hicon{ width:30px; height:30px; display:flex; align-items:center; }
+  .home .hname{ font-size:22px; font-weight:600; color:rgba(244,246,248,.9); }
+  .home.sel{ transform:scale(1.04); outline-color:rgba(255,255,255,.9);
+    box-shadow:0 20px 50px rgba(0,0,0,.5), 0 0 50px -12px #8fd0ff; }
   .card{
-    width:300px; height:300px; margin-right:44px; border-radius:30px; position:relative;
+    width:300px; height:300px; border-radius:30px; position:relative;
     display:flex; flex-direction:column; align-items:center; justify-content:center;
     background:#14181d; overflow:hidden; transform:scale(.95);
     transition:transform .2s ease, box-shadow .2s ease, outline-color .2s ease;
@@ -74,12 +82,18 @@
       <div><div class="clock" id="clock">--:--</div><div class="date" id="date"></div></div>
       <div class="weather" id="weather" style="display:none"><div class="t" id="wtemp">--</div><div class="c" id="wcity"></div></div>
     </div>
-    <div class="rowwrap"><div class="row" id="row"></div></div>
+    <div class="rowwrap">
+      <div class="row" id="row"></div>
+      <div class="homewrap"><div class="home" id="homebtn">
+        <div class="hicon"><svg width="30" height="30" viewBox="0 0 24 24"><path d="M4 12l8-7 8 7M6 10.5V20h12v-9.5" fill="none" stroke="#9fb3c8" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round"/></svg></div>
+        <div class="hname">TizenBrew</div>
+      </div></div>
+    </div>
     <div class="hint">
       <span><b>&#9664; &#9654;</b> v&aelig;lg</span>
       <span><b>OK</b> &aring;bn</span>
+      <span><b>Pil ned</b> Hjem-knap</span>
       <span><b>Tilbage</b> til TizenBrew</span>
-      <span><b>Pil ned</b> diagnostik</span>
     </div>
   </div>
   <div class="toast" id="toast"></div>
@@ -95,7 +109,7 @@
 (function () {
   'use strict';
 
-  var BUILD = '0.1.3';
+  var BUILD = '0.1.4';
   var hudEl = document.getElementById('hud');
   var dbg = { key: '-', svc: '…', apps: '-', mods: '-', err: '' };
   function hud() {
@@ -128,10 +142,12 @@
   var modules = [];         // moduler i TizenBrew (fra ws): {name,appPath,...}
   var tiles = CFG.tiles || [];
   var sel = 0;
+  var onHome = false;
   var busy = false;
 
   var row = document.getElementById('row');
   var toastEl = document.getElementById('toast');
+  var homebtn = document.getElementById('homebtn');
 
   /* ---------- Småt ---------- */
   function toast(msg) {
@@ -267,9 +283,18 @@
   function paint() {
     var cards = row.childNodes;
     for (var i = 0; i < cards.length; i++) {
-      cards[i].className = 'card' + (i === sel ? ' sel' : '');
+      cards[i].className = 'card' + (!onHome && i === sel ? ' sel' : '');
     }
+    if (homebtn) { homebtn.className = 'home' + (onHome ? ' sel' : ''); }
   }
+
+  // Tilbage til TizenBrews hjemmeskærm. TizenBrew håndterer ikke selv Tilbage
+  // for app-moduler, så vi gør det: history.back(), ellers TizenBrews rod.
+  function goHome() {
+    try { history.back(); } catch (e) {}
+    setTimeout(function () { try { location.href = location.protocol + '//' + location.host + '/'; } catch (e2) {} }, 400);
+  }
+  if (homebtn) { homebtn.onclick = goHome; }
 
   /* ---------- Åbn ---------- */
   function open(tile) {
@@ -314,12 +339,20 @@
     var k = e.keyCode;
     dbg.key = k + (e.key ? ' (' + e.key + ')' : ''); hud();
     if (diag.className.indexOf('on') !== -1) { diag.className = 'diag'; take(e); return; }
-    // Samsung: 37/38/39/40 piletaster, 13 OK/Enter, 10009 Tilbage. Pil ned = diagnostik.
+    // 10009 = Tilbage. TizenBrew gør intet selv, så vi sender hjem.
+    if (k === 10009) { goHome(); take(e); return; }
+    if (onHome) {
+      if (k === 38) { onHome = false; paint(); take(e); }          // op → tilbage til felterne
+      else if (k === 13) { goHome(); take(e); }                    // OK på Hjem-knap
+      else if (k === 40 || k === 68) { showDiag(); take(e); }      // diagnostik (dev)
+      return;
+    }
+    // 37/38/39/40 piletaster, 13 OK/Enter. Pil ned = Hjem-knap.
     if (k === 39) { sel = Math.min(sel + 1, tiles.length - 1); paint(); take(e); }
     else if (k === 37) { sel = Math.max(sel - 1, 0); paint(); take(e); }
+    else if (k === 40) { onHome = true; paint(); take(e); }
     else if (k === 13) { open(tiles[sel]); take(e); }
-    else if (k === 40 || k === 68) { showDiag(); take(e); }
-    // 10009 (Tilbage) og alt andet lader vi gå videre til TizenBrew.
+    else if (k === 68) { showDiag(); take(e); }                    // 'd' (USB-tastatur) → diagnostik
   }
   window.addEventListener('keydown', onKey, true);
   try { window.focus(); if (document.body) { document.body.focus(); } } catch (eF) {}
