@@ -18,6 +18,9 @@ Sektionen **Ikke udrullet** indeholder commits, der endnu ikke er sat i drift (i
 ### Dokumentation
 - README med installation, AutoLaunch og hvorfor repoet er offentligt (c485bea)
 
+### Drift
+- **(app)** V0.1.1 og synligt build-nr i debug-linje (tvinger frisk hentning i TizenBrew) (d88d5fc)
+
 ### Andet
 - Initial commit (a07a6ab)
 
