@@ -95,7 +95,7 @@
 (function () {
   'use strict';
 
-  var BUILD = '0.1.2';
+  var BUILD = '0.1.3';
   var hudEl = document.getElementById('hud');
   var dbg = { key: '-', svc: '…', apps: '-', mods: '-', err: '' };
   function hud() {
@@ -162,8 +162,9 @@
     var url = SERVICE + '/session?nav=' + (window.performance && performance.timing ? performance.timing.navigationStart : 0) + '&ready=' + Date.now();
     xhr('GET', url, null, null, function (status, data) {
       if (status === 200 && data && data.token) { token = data.token; return done(true, status); }
-      dbg.svc = 'prøver (' + status + ', ' + tries + ')'; hud();
-      if (tries <= 0) { return done(false, status); }
+      var reason = (data && data.error) ? ' ' + data.error : '';
+      dbg.svc = 'prøver (' + status + reason + ')'; hud();
+      if (tries <= 0) { return done(false, status + reason); }
       // TizenBrew henter service og side samtidig: prøv igen.
       setTimeout(function () { getSession(tries - 1, done); }, 1000);
     });

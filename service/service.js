@@ -92,12 +92,19 @@
     return a === '::1' || /^127\./.test(a);
   }
 
+  // TizenBrew serverer siden fra en dynamisk port (ikke altid 8081), så vi
+  // accepterer enhver loopback-origin. Den rigtige beskyttelse er, at kun TV'et
+  // selv kan nå service'et (isLoopback på socket'en) + repo-navn-tjekket nedenfor.
+  function isLoopbackOrigin(o) {
+    return /^https?:\/\/(127\.0\.0\.1|localhost)(:\d+)?$/.test(String(o || ''));
+  }
+
   // Forventet adresse: http://127.0.0.1:8081/module/<kodet navn>/app/..., hvor det
   // afkodede navn er gh/<konto>/tv-startmenu, npm/tv-startmenu eller
   // npm/@<scope>/tv-startmenu, med eller uden @<version> bagefter.
   function isModulePage(referer) {
     var parsed = urlLib.parse(String(referer || ''));
-    if (!parsed.protocol || !parsed.host || ORIGINS.indexOf(parsed.protocol + '//' + parsed.host) === -1) { return false; }
+    if (!parsed.protocol || !parsed.host || !isLoopbackOrigin(parsed.protocol + '//' + parsed.host)) { return false; }
     var parts = String(parsed.pathname || '').split('/');
     if (parts.length < 5 || parts[0] !== '' || parts[1] !== 'module' || parts[3] !== 'app') { return false; }
     var name;
@@ -335,7 +342,7 @@
     // Ikoner hentes af <img>-tags, uden Origin-header.
     if (req.method === 'GET' && path === '/ikon') { return serveIcon(parsed.query.id, res); }
 
-    if (ORIGINS.indexOf(origin) === -1) { return refuse(req, res, 'Origin afvist (' + (origin || 'ingen') + ')'); }
+    if (!isLoopbackOrigin(origin)) { return refuse(req, res, 'Origin afvist (' + (origin || 'ingen') + ')'); }
     var cors = { 'Access-Control-Allow-Origin': origin, 'Vary': 'Origin' };
 
     if (req.method === 'OPTIONS') {
