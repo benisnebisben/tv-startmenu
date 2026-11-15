@@ -61,6 +61,7 @@
     error: null,
     page: null,
     requests: { session: 0, lastSessionAt: null, refused: [] },
+    lastReferer: null,
     apps: { list: null, at: null, ms: null, error: null },
     launches: [],
     icons: { served: 0, failed: 0, lastError: null }
@@ -285,6 +286,7 @@
     r.generatedAt = Date.now();
     r.page = state.page;
     r.requests = state.requests;
+    r.lastReferer = state.lastReferer;
     r.apps = appsSummary(true);
     r.launches = state.launches;
     r.icons = state.icons;
@@ -351,7 +353,9 @@
       res.writeHead(204, cors);
       return res.end();
     }
-    if (!isModulePage(req.headers.referer)) { return refuse(req, res, 'Side afvist: kun modulet ' + DEPOT + ' serveres'); }
+    // Referer-tjek er ikke længere en blokering: beskyttelsen er loopback-socket +
+    // loopback-origin. Vi gemmer refereren, så vi kan stramme tjekket senere.
+    state.lastReferer = req.headers.referer || null;
 
     if (req.method === 'GET' && path === '/session') {
       recordPage(parsed.query);
