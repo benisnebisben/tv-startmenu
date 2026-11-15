@@ -105,14 +105,13 @@
   function isModulePage(referer) {
     var parsed = urlLib.parse(String(referer || ''));
     if (!parsed.protocol || !parsed.host || !isLoopbackOrigin(parsed.protocol + '//' + parsed.host)) { return false; }
-    var parts = String(parsed.pathname || '').split('/');
-    if (parts.length < 5 || parts[0] !== '' || parts[1] !== 'module' || parts[3] !== 'app') { return false; }
-    var name;
-    try { name = decodeURIComponent(parts[2]); } catch (e) { return false; }
-    var s = name.replace(/@[^\/@]*$/, '').split('/');
-    if (s[0] === 'gh') { return s.length === 3 && s[1] !== '' && s[2] === DEPOT; }
-    if (s[0] === 'npm') { return (s.length === 2 && s[1] === DEPOT) || (s.length === 3 && /^@./.test(s[1]) && s[2] === DEPOT); }
-    return false;
+    var path = String(parsed.pathname || '');
+    try { path = decodeURIComponent(path); } catch (e) {}
+    // TizenBrew serverer modul-sider under /module/<navn>/app/... Navnet kan indeholde
+    // skråstreger (gh/konto/repo) og et @<version>-suffiks, og kan være kodet eller ej.
+    // Vi kræver blot, at det er en modul-side for netop vores repo.
+    if (path.indexOf('/module/') === -1) { return false; }
+    return new RegExp('(^|/)' + DEPOT + '($|[@/])').test(path);
   }
 
   /* ---------- Apps ---------- */

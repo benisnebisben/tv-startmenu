@@ -32,26 +32,40 @@
   .rowwrap{ flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; }
   .row{ display:flex; gap:44px; }
   .homewrap{ margin-top:42px; }
-  .home{ display:flex; align-items:center; justify-content:center; gap:14px; height:84px; padding:0 34px;
-    border-radius:20px; background:#14181d; transform:scale(.95); outline:3px solid transparent;
-    transition:transform .2s ease, box-shadow .2s ease, outline-color .2s ease; }
-  .home .hicon{ width:30px; height:30px; display:flex; align-items:center; }
-  .home .hname{ font-size:22px; font-weight:600; color:rgba(244,246,248,.9); }
-  .home.sel{ transform:scale(1.04); outline-color:rgba(255,255,255,.9);
-    box-shadow:0 20px 50px rgba(0,0,0,.5), 0 0 50px -12px #8fd0ff; }
+  .home{ position:relative; display:flex; align-items:center; justify-content:center; gap:14px; height:84px; padding:0 34px;
+    border-radius:24px; overflow:hidden; transform:scale(.95);
+    background:linear-gradient(160deg, rgba(255,255,255,.10), rgba(255,255,255,.03));
+    -webkit-backdrop-filter:blur(16px) saturate(1.3); backdrop-filter:blur(16px) saturate(1.3);
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.24), inset 0 0 0 1px rgba(255,255,255,.08), 0 14px 34px rgba(0,0,0,.4);
+    transition:transform .22s ease, box-shadow .22s ease, background .22s ease; }
+  .home::before{ content:""; position:absolute; left:0; top:0; right:0; height:52%; pointer-events:none;
+    background:linear-gradient(180deg, rgba(255,255,255,.20), rgba(255,255,255,0)); }
+  .home .hicon{ position:relative; z-index:1; width:30px; height:30px; display:flex; align-items:center; }
+  .home .hname{ position:relative; z-index:1; font-size:22px; font-weight:600; color:rgba(244,246,248,.92); }
+  .home.sel{ transform:scale(1.05);
+    background:linear-gradient(160deg, rgba(255,255,255,.18), rgba(255,255,255,.05));
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.36), inset 0 0 0 1px rgba(255,255,255,.16),
+      0 22px 48px rgba(0,0,0,.45), 0 0 54px -12px #8fd0ff; }
+  /* Liquid-glass: gennemsigtige, frostede fliser der lader baggrunden skinne igennem. */
   .card{
-    width:300px; height:300px; border-radius:30px; position:relative;
+    width:300px; height:300px; border-radius:36px; position:relative;
     display:flex; flex-direction:column; align-items:center; justify-content:center;
-    background:#14181d; overflow:hidden; transform:scale(.95);
-    transition:transform .2s ease, box-shadow .2s ease, outline-color .2s ease;
-    outline:3px solid transparent;
+    overflow:hidden; transform:scale(.95);
+    background:linear-gradient(160deg, rgba(255,255,255,.11), rgba(255,255,255,.03));
+    -webkit-backdrop-filter:blur(20px) saturate(1.4); backdrop-filter:blur(20px) saturate(1.4);
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.28), inset 0 0 0 1px rgba(255,255,255,.08), 0 22px 54px rgba(0,0,0,.45);
+    transition:transform .24s ease, box-shadow .24s ease, background .24s ease;
   }
-  .card .icon{ width:118px; height:118px; display:flex; align-items:center; justify-content:center; margin-bottom:26px; }
+  .card::before{ content:""; position:absolute; left:0; top:0; right:0; height:50%; pointer-events:none;
+    background:linear-gradient(180deg, rgba(255,255,255,.22), rgba(255,255,255,0)); }
+  .card .icon{ position:relative; z-index:1; width:118px; height:118px; display:flex; align-items:center; justify-content:center; margin-bottom:26px; }
   .card .icon img{ max-width:100%; max-height:100%; }
-  .card .name{ font-size:30px; font-weight:600; }
-  .card .flag{ position:absolute; bottom:18px; font-size:15px; color:rgba(244,246,248,.5); }
-  .card.sel{ transform:scale(1.05); outline-color:rgba(255,255,255,.92);
-    box-shadow:0 26px 70px rgba(0,0,0,.55), 0 0 60px -10px #fff; }
+  .card .name{ position:relative; z-index:1; font-size:30px; font-weight:600; }
+  .card .flag{ position:absolute; z-index:1; bottom:18px; font-size:15px; color:rgba(244,246,248,.55); }
+  .card.sel{ transform:scale(1.06);
+    background:linear-gradient(160deg, rgba(255,255,255,.19), rgba(255,255,255,.05));
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.42), inset 0 0 0 1px rgba(255,255,255,.18),
+      0 30px 74px rgba(0,0,0,.5), 0 0 82px -6px var(--glow); }
   .card.busy{ opacity:.7; }
 
   .hint{ margin-top:18px; font-size:18px; color:rgba(244,246,248,.55); }
@@ -109,7 +123,7 @@
 (function () {
   'use strict';
 
-  var BUILD = '0.1.4';
+  var BUILD = '0.1.5';
   var hudEl = document.getElementById('hud');
   var dbg = { key: '-', svc: '…', apps: '-', mods: '-', err: '' };
   function hud() {
@@ -272,7 +286,7 @@
       var t = tiles[i];
       var el = document.createElement('div');
       el.className = 'card' + (i === sel ? ' sel' : '');
-      el.style.background = 'linear-gradient(160deg, ' + t.bg[0] + ', ' + t.bg[1] + ')';
+      el.style.setProperty('--glow', t.glow);
       var flag = tileFlag(t);
       el.innerHTML = '<div class="icon">' + iconHTML(t) + '</div><div class="name">' + t.name + '</div>' +
                      (flag ? '<div class="flag">' + flag + '</div>' : '');
