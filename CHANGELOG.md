@@ -12,6 +12,7 @@ Sektionen **Ikke udrullet** indeholder commits, der endnu ikke er sat i drift (i
 - **(service)** Service-bro der lister og starter TV'ets apps og henter ikoner (b53eb7e)
 
 ### Rettelser
+- **(service)** Fjern referer-blokering (loopback er beskyttelsen); feat(app): Spatial Depth-design (afa02cd)
 - **(service)** Robust referer-tjek for sti med skraastreger; feat(app): liquid-glass look (1d66958)
 - **(service)** Accepter siden fra enhver loopback-port (dynamisk TizenBrew-port) og vis 403-aarsag (96056fb)
 - **(app)** Laes service- og kanal-port fra TizenBrew-URL; laengere opstart; modulliste uafhaengig af service (1559764)
@@ -26,6 +27,7 @@ Sektionen **Ikke udrullet** indeholder commits, der endnu ikke er sat i drift (i
 - **(app)** V0.1.1 og synligt build-nr i debug-linje (tvinger frisk hentning i TizenBrew) (d88d5fc)
 
 ### Andet
+- Merge branch 'main' of https://github.com/benisnebisben/tv-startmenu (00813c4)
 - Merge branch 'main' of https://github.com/benisnebisben/tv-startmenu (e24c605)
 - Merge branch 'main' of https://github.com/benisnebisben/tv-startmenu (7cef5eb)
 - Merge branch 'main' of https://github.com/benisnebisben/tv-startmenu (42b8256)
